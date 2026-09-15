@@ -21,9 +21,9 @@ jobs:
 
       - name: Find Android project
         run: |
-          GRADLEW=$(find project -name gradlew -type f | head -n 1)
-          echo "GRADLEW=$GRADLEW" >> $GITHUB_ENV
-          echo "PROJECT_DIR=$(dirname "$GRADLEW")" >> $GITHUB_ENV
+          PROJECT_DIR=$(find project -name settings.gradle.kts -o -name settings.gradle | head -n 1 | xargs dirname)
+          echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
+          echo "Android project found at: $PROJECT_DIR"
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -34,13 +34,13 @@ jobs:
       - name: Build APK
         run: |
           cd "$PROJECT_DIR"
-          chmod +x gradlew
-          ./gradlew assembleDebug
+          gradle assembleDebug
 
-      - name: Prepare APK
+      - name: Find APK
         run: |
           mkdir output
-          APK=$(find "$PROJECT_DIR" -path "*/build/outputs/apk/debug/app-debug.apk" -type f | head -n 1)
+          APK=$(find "$PROJECT_DIR" -name "app-debug.apk" -type f | head -n 1)
+          echo "APK found: $APK"
           cp "$APK" output/app-debug.apk
 
       - name: Upload APK
