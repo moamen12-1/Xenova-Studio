@@ -39,10 +39,11 @@ jobs:
       - name: Check Gradle version
         run: gradle --version
 
-      - name: Build Debug APK
+            - name: Build Debug APK
         run: |
           cd "$PROJECT_DIR"
-          gradle assembleDebug --no-daemon
+          gradle clean
+          gradle :app:assembleDebug --no-daemon --stacktrace
 
       - name: Find APK
         run: |
