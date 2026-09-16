@@ -8,74 +8,43 @@ on:
 
 jobs:
   build:
-    name: Build Shadow House Escape
     runs-on: ubuntu-latest
 
     steps:
-
-      # 1. تحميل ملفات المشروع من GitHub
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      # 2. استخراج مشروع اللعبة
       - name: Extract Game Project
         run: |
           mkdir -p project
-          unzip -q "Shadow-House-Escape.zip" -d project
+          unzip -q "shadow-house_-escape.zip" -d project
 
-      # 3. إعداد Java
-      - name: Setup Java 21
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
-          cache: gradle
+          java-version: "21"
 
-      # 4. إعداد Gradle
-      - name: Setup Gradle 9.3.1
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '9.3.1'
+          gradle-version: "9.3.1"
 
-      # 5. البحث عن مشروع Android الحقيقي
       - name: Find Android Project
-        shell: bash
         run: |
-          PROJECT_DIR=$(find project -type f \( \
-            -name "settings.gradle.kts" -o \
-            -name "settings.gradle" \
-          \) -print -quit | xargs -r dirname)
+          PROJECT_DIR=$(find project -type f \( -name "settings.gradle.kts" -o -name "settings.gradle" \) -print -quit | xargs dirname)
 
           if [ -z "$PROJECT_DIR" ]; then
-            echo "ERROR: Android project was not found."
-            echo "The ZIP must contain a native Android project."
+            echo "Android project not found"
             exit 1
           fi
 
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "Project found: $PROJECT_DIR"
 
-          echo "======================================"
-          echo "Android project found:"
-          echo "$PROJECT_DIR"
-          echo "======================================"
-
-      # 6. التأكد من وجود تطبيق app
-      - name: Check Android App Module
-        shell: bash
-        run: |
-          if [ ! -d "$PROJECT_DIR/app" ]; then
-            echo "ERROR: app module was not found."
-            echo "Expected: app/"
-            exit 1
-          fi
-
-          echo "Android app module found successfully."
-
-      # 7. إنشاء Debug Keystore تلقائيًا
       - name: Create Debug Keystore
-        shell: bash
         run: |
-          keytool -genkeypair -v \
+          keytool -genkeypair \
             -keystore "$PROJECT_DIR/debug.keystore" \
             -storepass android \
             -keypass android \
@@ -85,67 +54,26 @@ jobs:
             -validity 10000 \
             -dname "CN=Android Debug,O=Android,C=US"
 
-          echo "Debug keystore created successfully."
-
-      # 8. التحقق من Gradle
-      - name: Check Gradle
-        run: |
-          gradle --version
-
-      # 9. بناء APK للعبة
-      - name: Build Shadow House Escape APK
-        shell: bash
+      - name: Build APK
         run: |
           cd "$PROJECT_DIR"
+          gradle :app:assembleDebug --no-daemon
 
-          gradle :app:assembleDebug \
-            --no-daemon \
-            --stacktrace
-
-      # 10. البحث عن APK
-      - name: Find Generated APK
-        shell: bash
+      - name: Prepare APK
         run: |
           mkdir -p output
 
-          APK=$(find "$PROJECT_DIR" \
-            -type f \
-            -name "app-debug.apk" \
-            -print -quit)
+          APK=$(find "$PROJECT_DIR" -type f -name "app-debug.apk" -print -quit)
 
           if [ -z "$APK" ]; then
-            echo "======================================"
-            echo "ERROR: APK was not generated."
-            echo "======================================"
-
-            find "$PROJECT_DIR/app/build" \
-              -type f \
-              \( -name "*.apk" -o -name "*.aab" \) \
-              -print 2>/dev/null || true
-
+            echo "APK was not generated"
             exit 1
           fi
 
-          echo "======================================"
-          echo "APK FOUND:"
-          echo "$APK"
-          echo "======================================"
+          cp "$APK" output/Shadow-House-Escape.apk
 
-          cp "$APK" "output/Shadow-House-Escape.apk"
-
-      # 11. رفع APK إلى GitHub Actions
-      - name: Upload Shadow House Escape APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: SHADOW-HOUSE-ESCAPE-APK
+          name: Shadow-House-Escape-APK
           path: output/Shadow-House-Escape.apk
-          if-no-files-found: error
-
-      # 12. معلومات النهاية
-      - name: Build Complete
-        run: |
-          echo "======================================"
-          echo "SHADOW HOUSE ESCAPE BUILD COMPLETE"
-          echo "======================================"
-          echo "APK: Shadow-House-Escape.apk"
-          echo "======================================"
