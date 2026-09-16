@@ -14,17 +14,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Find Project
+      - name: Extract Project
         run: |
-          PROJECT_DIR=$(find . -type f \( -name "settings.gradle.kts" -o -name "settings.gradle" \) -print -quit | xargs dirname)
-
-          if [ -z "$PROJECT_DIR" ]; then
-            echo "ERROR: Android project not found."
-            exit 1
-          fi
-
-          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-          echo "Android project found at: $PROJECT_DIR"
+          mkdir project
+          unzip -q "Shadow-House-Escape.zip" -d project
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -37,8 +30,11 @@ jobs:
         with:
           gradle-version: '9.3.1'
 
-      - name: Check Gradle
-        run: gradle --version
+      - name: Find Android Project
+        run: |
+          PROJECT_DIR=$(find project -type f \( -name "settings.gradle.kts" -o -name "settings.gradle" \) -print -quit | xargs dirname)
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "Android project found at: $PROJECT_DIR"
 
       - name: Create Debug Keystore
         run: |
@@ -52,7 +48,7 @@ jobs:
             -validity 10000 \
             -dname "CN=Android Debug,O=Android,C=US"
 
-      - name: Build Debug APK
+      - name: Build APK
         run: |
           cd "$PROJECT_DIR"
           gradle :app:assembleDebug --no-daemon
@@ -60,14 +56,10 @@ jobs:
       - name: Find APK
         run: |
           mkdir -p output
-
-          APK=$(find "$PROJECT_DIR" \
-            -type f \
-            -name "app-debug.apk" \
-            -print -quit)
+          APK=$(find "$PROJECT_DIR" -type f -name "app-debug.apk" -print -quit)
 
           if [ -z "$APK" ]; then
-            echo "ERROR: APK was not generated."
+            echo "APK NOT FOUND"
             exit 1
           fi
 
@@ -77,5 +69,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Shadow-House-Escape-APK
+          name: SHADOW-HOUSE-ESCAPE-APK
           path: output/Shadow-House-Escape.apk
